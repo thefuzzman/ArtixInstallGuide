@@ -1,0 +1,1136 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Artix Linux Install Guide — LUKS · dinit · GRUB</title>
+<style>
+  :root {
+    --bg: #0d1117;
+    --surface: #161b22;
+    --surface2: #1c2129;
+    --border: #30363d;
+    --border2: #21262d;
+    --text: #e6edf3;
+    --muted: #7d8590;
+    --accent: #58a6ff;
+    --accent2: #79c0ff;
+    --green: #3fb950;
+    --green-bg: #0d2a0f;
+    --amber: #d29922;
+    --amber-bg: #2a1f00;
+    --red: #f85149;
+    --red-bg: #2a0d0d;
+    --teal: #39c5cf;
+    --teal-bg: #0d2229;
+    --purple: #bc8cff;
+    --purple-bg: #1a0d2e;
+    --mono: 'JetBrains Mono', 'Fira Code', 'Cascadia Code', 'Consolas', monospace;
+    --sans: 'Inter', 'Segoe UI', system-ui, sans-serif;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--sans);
+    font-size: 15px;
+    line-height: 1.7;
+    padding: 0;
+  }
+
+  .hero {
+    background: linear-gradient(135deg, #0d1117 0%, #0d2229 50%, #0d1117 100%);
+    border-bottom: 1px solid var(--border);
+    padding: 3rem 2rem 2.5rem;
+    text-align: center;
+  }
+
+  .hero-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: var(--teal-bg);
+    border: 1px solid var(--teal);
+    color: var(--teal);
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    padding: 3px 10px;
+    border-radius: 20px;
+    margin-bottom: 1rem;
+  }
+
+  .hero h1 {
+    font-size: clamp(1.8rem, 4vw, 2.8rem);
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    color: var(--text);
+    margin-bottom: 0.75rem;
+  }
+
+  .hero h1 span { color: var(--teal); }
+
+  .hero-sub {
+    color: var(--muted);
+    font-size: 15px;
+    max-width: 600px;
+    margin: 0 auto 1.5rem;
+  }
+
+  .tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    justify-content: center;
+  }
+
+  .tag {
+    font-size: 12px;
+    font-weight: 500;
+    font-family: var(--mono);
+    padding: 3px 10px;
+    border-radius: 6px;
+    border: 1px solid;
+  }
+
+  .tag.blue  { color: var(--accent); border-color: #1f3a5a; background: #0d1e33; }
+  .tag.green { color: var(--green);  border-color: #1a3d1c; background: var(--green-bg); }
+  .tag.amber { color: var(--amber);  border-color: #3d2e00; background: var(--amber-bg); }
+  .tag.purple{ color: var(--purple); border-color: #2e1f4d; background: var(--purple-bg); }
+  .tag.teal  { color: var(--teal);   border-color: #1a3d42; background: var(--teal-bg); }
+
+  .layout {
+    display: grid;
+    grid-template-columns: 240px 1fr;
+    min-height: 100vh;
+    max-width: 1200px;
+    margin: 0 auto;
+  }
+
+  /* Sidebar */
+  .sidebar {
+    position: sticky;
+    top: 0;
+    height: 100vh;
+    overflow-y: auto;
+    border-right: 1px solid var(--border2);
+    padding: 1.5rem 0;
+    background: var(--surface);
+    scrollbar-width: thin;
+    scrollbar-color: var(--border) transparent;
+  }
+
+  .sidebar-title {
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--muted);
+    padding: 0 1.25rem 0.75rem;
+  }
+
+  .sidebar a {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 1.25rem;
+    color: var(--muted);
+    text-decoration: none;
+    font-size: 13px;
+    transition: color 0.15s, background 0.15s;
+    border-left: 2px solid transparent;
+  }
+
+  .sidebar a:hover {
+    color: var(--text);
+    background: var(--surface2);
+  }
+
+  .sidebar a.active {
+    color: var(--teal);
+    border-left-color: var(--teal);
+    background: var(--teal-bg);
+  }
+
+  .sidebar .step-num {
+    font-family: var(--mono);
+    font-size: 11px;
+    font-weight: 700;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    background: var(--border);
+    color: var(--muted);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+
+  /* Main content */
+  .main {
+    padding: 2.5rem 2.5rem 4rem;
+    max-width: 860px;
+  }
+
+  .section {
+    margin-bottom: 3rem;
+    scroll-margin-top: 1.5rem;
+  }
+
+  .section-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 1.25rem;
+    padding-bottom: 0.75rem;
+    border-bottom: 1px solid var(--border2);
+  }
+
+  .section-num {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background: var(--teal-bg);
+    border: 1px solid var(--teal);
+    color: var(--teal);
+    font-size: 13px;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: var(--mono);
+    flex-shrink: 0;
+  }
+
+  .section-title {
+    font-size: 1.2rem;
+    font-weight: 600;
+    color: var(--text);
+  }
+
+  .section-subtitle {
+    font-size: 13px;
+    color: var(--muted);
+    margin-left: auto;
+  }
+
+  p { margin-bottom: 0.85rem; color: #b1bac4; }
+
+  /* Code blocks */
+  .codeblock {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    margin: 1rem 0;
+    overflow: hidden;
+  }
+
+  .codeblock-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 8px 14px;
+    background: var(--surface2);
+    border-bottom: 1px solid var(--border2);
+  }
+
+  .codeblock-label {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--muted);
+    font-family: var(--mono);
+    letter-spacing: 0.05em;
+  }
+
+  .codeblock pre {
+    padding: 1rem 1.25rem;
+    overflow-x: auto;
+    font-family: var(--mono);
+    font-size: 13px;
+    line-height: 1.65;
+    color: var(--text);
+  }
+
+  .codeblock pre .comment { color: #6e7681; }
+  .codeblock pre .cmd { color: var(--accent2); }
+  .codeblock pre .arg { color: var(--green); }
+  .codeblock pre .flag { color: var(--amber); }
+  .codeblock pre .path { color: #ffa657; }
+  .codeblock pre .val { color: var(--purple); }
+  .codeblock pre .var  { color: var(--teal); }
+
+  /* Inline code */
+  code {
+    font-family: var(--mono);
+    font-size: 12.5px;
+    background: var(--surface2);
+    border: 1px solid var(--border2);
+    padding: 1px 5px;
+    border-radius: 4px;
+    color: var(--accent2);
+  }
+
+  /* Callouts */
+  .callout {
+    display: flex;
+    gap: 12px;
+    padding: 12px 14px;
+    border-radius: 8px;
+    margin: 1rem 0;
+    font-size: 14px;
+    line-height: 1.6;
+    border-left: 3px solid;
+  }
+
+  .callout-icon { flex-shrink: 0; font-size: 16px; margin-top: 1px; }
+
+  .callout.info    { background: #0d1e33; border-color: var(--accent);  color: #a5c8f0; }
+  .callout.warn    { background: var(--amber-bg); border-color: var(--amber); color: #c9a227; }
+  .callout.danger  { background: var(--red-bg); border-color: var(--red); color: #f07e7a; }
+  .callout.success { background: var(--green-bg); border-color: var(--green); color: #56c95f; }
+  .callout.tip     { background: var(--purple-bg); border-color: var(--purple); color: #b88ff0; }
+
+  .callout strong { color: inherit; font-weight: 700; }
+
+  /* Step list */
+  ol.steps { list-style: none; counter-reset: step; padding: 0; }
+  ol.steps li {
+    counter-increment: step;
+    position: relative;
+    padding-left: 2.25rem;
+    margin-bottom: 1rem;
+    color: #b1bac4;
+  }
+  ol.steps li::before {
+    content: counter(step);
+    position: absolute;
+    left: 0;
+    top: 2px;
+    width: 20px;
+    height: 20px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 50%;
+    font-size: 11px;
+    font-weight: 700;
+    font-family: var(--mono);
+    color: var(--teal);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    line-height: 20px;
+  }
+
+  /* Partition table */
+  table.part-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+    margin: 1rem 0;
+  }
+  table.part-table th {
+    text-align: left;
+    padding: 8px 12px;
+    background: var(--surface2);
+    color: var(--muted);
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.07em;
+    text-transform: uppercase;
+    border-bottom: 1px solid var(--border);
+  }
+  table.part-table td {
+    padding: 10px 12px;
+    border-bottom: 1px solid var(--border2);
+    font-family: var(--mono);
+    font-size: 12.5px;
+    color: var(--text);
+    vertical-align: top;
+  }
+  table.part-table tr:last-child td { border-bottom: none; }
+  table.part-table td.desc { font-family: var(--sans); color: var(--muted); }
+
+  .pill {
+    display: inline-block;
+    font-size: 11px;
+    font-weight: 600;
+    padding: 2px 8px;
+    border-radius: 12px;
+  }
+  .pill.efi  { background: #0d1e33; color: var(--accent); }
+  .pill.luks { background: var(--amber-bg); color: var(--amber); }
+  .pill.root { background: var(--green-bg); color: var(--green); }
+  .pill.swap { background: var(--purple-bg); color: var(--purple); }
+
+  h3 { font-size: 15px; font-weight: 600; color: var(--text); margin: 1.5rem 0 0.5rem; }
+
+  .toc-nav { display: none; }
+
+  @media (max-width: 720px) {
+    .layout { grid-template-columns: 1fr; }
+    .sidebar { display: none; }
+    .main { padding: 1.5rem 1rem 3rem; }
+  }
+</style>
+</head>
+<body>
+
+<div class="hero">
+  <div class="hero-badge">★ Full Install Guide</div>
+  <h1>Artix Linux<br><span>LUKS · dinit · GRUB</span></h1>
+  <p class="hero-sub">A complete, step-by-step installation guide — encrypted root on NVMe, dinit init system, iwd networking, CUPS with Avahi printer discovery.</p>
+  <div class="tags">
+    <span class="tag blue">NVMe · GPT · UEFI</span>
+    <span class="tag amber">LUKS2 encryption</span>
+    <span class="tag green">dinit init</span>
+    <span class="tag teal">GRUB bootloader</span>
+    <span class="tag purple">Avahi · CUPS</span>
+  </div>
+</div>
+
+<div class="layout">
+
+<nav class="sidebar">
+  <div class="sidebar-title">Steps</div>
+  <a href="#s0"><span class="step-num">0</span>Pre-flight</a>
+  <a href="#s1"><span class="step-num">1</span>Partition disk</a>
+  <a href="#s2"><span class="step-num">2</span>LUKS setup</a>
+  <a href="#s3"><span class="step-num">3</span>Format &amp; mount</a>
+  <a href="#s4"><span class="step-num">4</span>Base install</a>
+  <a href="#s5"><span class="step-num">5</span>fstab</a>
+  <a href="#s6"><span class="step-num">6</span>Chroot &amp; locale</a>
+  <a href="#s7"><span class="step-num">7</span>Hostname &amp; hosts</a>
+  <a href="#s8"><span class="step-num">8</span>initramfs</a>
+  <a href="#s9"><span class="step-num">9</span>GRUB</a>
+  <a href="#s10"><span class="step-num">10</span>Users &amp; sudo</a>
+  <a href="#s11"><span class="step-num">11</span>iwd networking</a>
+  <a href="#s12"><span class="step-num">12</span>Neovim</a>
+  <a href="#s13"><span class="step-num">13</span>CUPS &amp; Avahi</a>
+  <a href="#s14"><span class="step-num">14</span>Reboot</a>
+  <a href="#s15"><span class="step-num">✓</span>Post-install</a>
+</nav>
+
+<main class="main">
+
+<!-- ── 0. Pre-flight ─────────────────────────────────────────────── -->
+<section class="section" id="s0">
+  <div class="section-header">
+    <div class="section-num">0</div>
+    <div class="section-title">Pre-flight checklist</div>
+  </div>
+
+  <p>Boot the Artix Linux live ISO (dinit edition). Confirm you have internet — ethernet is easiest on the live environment; if you need Wi-Fi see Step 11 for <code>iwd</code> usage.</p>
+
+  <div class="codeblock">
+    <div class="codeblock-header"><span class="codeblock-label">verify boot mode (must show UEFI files)</span></div>
+    <pre><span class="cmd">ls</span> <span class="path">/sys/firmware/efi/efivars</span></pre>
+  </div>
+
+  <div class="callout warn">
+    <span class="callout-icon">⚠</span>
+    <div>If the directory does not exist, your system booted in BIOS/Legacy mode. Reboot and force UEFI in your firmware settings. This guide requires UEFI.</div>
+  </div>
+
+  <div class="codeblock">
+    <div class="codeblock-header"><span class="codeblock-label">confirm target disk</span></div>
+    <pre><span class="cmd">lsblk</span> <span class="flag">-o</span> NAME,SIZE,TYPE,MOUNTPOINT
+<span class="comment"># expect to see nvme0n1 — your target disk</span></pre>
+  </div>
+
+  <div class="codeblock">
+    <div class="codeblock-header"><span class="codeblock-label">verify internet</span></div>
+    <pre><span class="cmd">ping</span> <span class="flag">-c</span> <span class="val">3</span> <span class="arg">artixlinux.org</span></pre>
+  </div>
+
+  <div class="codeblock">
+    <div class="codeblock-header"><span class="codeblock-label">sync clock</span></div>
+    <pre><span class="cmd">dinitctl</span> start ntpd
+<span class="comment"># or</span>
+<span class="cmd">rdate</span> <span class="flag">-n</span> time.cloudflare.com</pre>
+  </div>
+</section>
+
+<!-- ── 1. Partition ──────────────────────────────────────────────── -->
+<section class="section" id="s1">
+  <div class="section-header">
+    <div class="section-num">1</div>
+    <div class="section-title">Partition the disk</div>
+  </div>
+
+  <p>We create a GPT table with two partitions: a small EFI System Partition and a large partition that will hold the LUKS container.</p>
+
+  <table class="part-table">
+    <thead>
+      <tr><th>Device</th><th>Size</th><th>Type</th><th>Purpose</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><code>nvme0n1p1</code></td>
+        <td>512 MiB</td>
+        <td><span class="pill efi">EFI</span></td>
+        <td class="desc">ESP — GRUB EFI files, unencrypted</td>
+      </tr>
+      <tr>
+        <td><code>nvme0n1p2</code></td>
+        <td>Remainder</td>
+        <td><span class="pill luks">LUKS2</span></td>
+        <td class="desc">Encrypted container → ext4 root + swapfile</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <div class="codeblock">
+    <div class="codeblock-header"><span class="codeblock-label">gdisk — interactive partitioner</span></div>
+    <pre><span class="cmd">gdisk</span> <span class="path">/dev/nvme0n1</span>
+
+<span class="comment"># Inside gdisk:</span>
+<span class="cmd">o</span>          <span class="comment"># create new GPT table, confirm with y</span>
+<span class="cmd">n</span>          <span class="comment"># new partition</span>
+             <span class="comment"># partition number: 1 (default)</span>
+             <span class="comment"># first sector: (default)</span>
+             <span class="comment"># last sector: +512M</span>
+             <span class="comment"># type code: ef00  ← EFI System Partition</span>
+<span class="cmd">n</span>          <span class="comment"># new partition</span>
+             <span class="comment"># partition number: 2 (default)</span>
+             <span class="comment"># first sector: (default)</span>
+             <span class="comment"># last sector: (default — use rest of disk)</span>
+             <span class="comment"># type code: 8309  ← Linux LUKS</span>
+<span class="cmd">w</span>          <span class="comment"># write and exit</span></pre>
+  </div>
+
+  <div class="codeblock">
+    <div class="codeblock-header"><span class="codeblock-label">verify</span></div>
+    <pre><span class="cmd">lsblk</span> <span class="path">/dev/nvme0n1</span>
+<span class="comment"># should show nvme0n1p1 (512M) and nvme0n1p2</span></pre>
+  </div>
+</section>
+
+<!-- ── 2. LUKS ───────────────────────────────────────────────────── -->
+<section class="section" id="s2">
+  <div class="section-header">
+    <div class="section-num">2</div>
+    <div class="section-title">Create &amp; open the LUKS2 container</div>
+  </div>
+
+  <p>We use LUKS2 with Argon2id KDF (the modern default) and <code>aes-xts-plain64</code> cipher. This provides strong encryption resistant to brute-force even with a short passphrase.</p>
+
+  <div class="codeblock">
+    <div class="codeblock-header"><span class="codeblock-label">format partition 2 as LUKS2</span></div>
+    <pre><span class="cmd">cryptsetup</span> <span class="flag">luksFormat</span> \
+  <span class="flag">--type</span>      luks2 \
+  <span class="flag">--cipher</span>    aes-xts-plain64 \
+  <span class="flag">--key-size</span>  512 \
+  <span class="flag">--hash</span>      sha512 \
+  <span class="flag">--pbkdf</span>     argon2id \
+  <span class="flag">--iter-time</span> 3000 \
+  <span class="path">/dev/nvme0n1p2</span>
+
+<span class="comment"># Type YES in uppercase when prompted, then enter your passphrase twice</span></pre>
+  </div>
+
+  <div class="callout warn">
+    <span class="callout-icon">⚠</span>
+    <div><strong>Passphrase:</strong> Use something long and memorable. There is no recovery if you forget it without a backup key. Consider adding a keyfile later (<code>cryptsetup luksAddKey</code>).</div>
+  </div>
+
+  <div class="codeblock">
+    <div class="codeblock-header"><span class="codeblock-label">open (map) the container</span></div>
+    <pre><span class="cmd">cryptsetup</span> open <span class="path">/dev/nvme0n1p2</span> <span class="var">cryptroot</span>
+<span class="comment"># Enter your passphrase
+# The decrypted device is now at /dev/mapper/cryptroot</span></pre>
+  </div>
+
+  <div class="codeblock">
+    <div class="codeblock-header"><span class="codeblock-label">verify mapped device</span></div>
+    <pre><span class="cmd">ls</span> <span class="flag">-la</span> <span class="path">/dev/mapper/cryptroot</span></pre>
+  </div>
+</section>
+
+<!-- ── 3. Format & Mount ─────────────────────────────────────────── -->
+<section class="section" id="s3">
+  <div class="section-header">
+    <div class="section-num">3</div>
+    <div class="section-title">Format partitions &amp; mount</div>
+  </div>
+
+  <div class="codeblock">
+    <div class="codeblock-header"><span class="codeblock-label">format EFI partition as FAT32</span></div>
+    <pre><span class="cmd">mkfs.fat</span> <span class="flag">-F32</span> <span class="flag">-n</span> <span class="val">EFI</span> <span class="path">/dev/nvme0n1p1</span></pre>
+  </div>
+
+  <div class="codeblock">
+    <div class="codeblock-header"><span class="codeblock-label">format LUKS inner device as ext4</span></div>
+    <pre><span class="cmd">mkfs.ext4</span> <span class="flag">-L</span> <span class="val">ROOT</span> <span class="path">/dev/mapper/cryptroot</span></pre>
+  </div>
+
+  <div class="codeblock">
+    <div class="codeblock-header"><span class="codeblock-label">mount everything</span></div>
+    <pre><span class="comment"># Mount root first</span>
+<span class="cmd">mount</span> <span class="path">/dev/mapper/cryptroot</span> <span class="path">/mnt</span>
+
+<span class="comment"># Create and mount EFI</span>
+<span class="cmd">mkdir</span> <span class="flag">-p</span> <span class="path">/mnt/boot/efi</span>
+<span class="cmd">mount</span> <span class="path">/dev/nvme0n1p1</span> <span class="path">/mnt/boot/efi</span></pre>
+  </div>
+
+  <h3>Optional: create a swapfile inside the LUKS container</h3>
+  <p>A swapfile inside the encrypted container is simpler than a swap partition — it gets encrypted automatically.</p>
+
+  <div class="codeblock">
+    <div class="codeblock-header"><span class="codeblock-label">create 8 GiB swapfile (adjust to ~RAM size)</span></div>
+    <pre><span class="cmd">dd</span> <span class="flag">if=</span>/dev/zero <span class="flag">of=</span>/mnt/swapfile <span class="flag">bs=</span>1M <span class="flag">count=</span>8192 <span class="flag">status=</span>progress
+<span class="cmd">chmod</span> <span class="val">600</span> <span class="path">/mnt/swapfile</span>
+<span class="cmd">mkswap</span> <span class="path">/mnt/swapfile</span>
+<span class="cmd">swapon</span> <span class="path">/mnt/swapfile</span></pre>
+  </div>
+</section>
+
+<!-- ── 4. Base Install ───────────────────────────────────────────── -->
+<section class="section" id="s4">
+  <div class="section-header">
+    <div class="section-num">4</div>
+    <div class="section-title">Install base system</div>
+  </div>
+
+  <p>Use <code>basestrap</code> (Artix's equivalent of <code>pacstrap</code>) to install the essential packages into <code>/mnt</code>. We install the <strong>dinit</strong> variants of all init-dependent packages.</p>
+
+  <div class="codeblock">
+    <div class="codeblock-header"><span class="codeblock-label">install base + dinit + kernel + firmware</span></div>
+    <pre><span class="cmd">basestrap</span> <span class="path">/mnt</span> \
+  base base-devel \
+  linux linux-headers linux-firmware \
+  dinit dinit-rc \
+  cryptsetup lvm2 \
+  grub efibootmgr \
+  vim neovim \
+  iwd iwd-dinit \
+  man-db man-pages \
+  curl wget git</pre>
+  </div>
+
+  <div class="callout info">
+    <span class="callout-icon">ℹ</span>
+    <div><strong>dinit-rc</strong> provides the OpenRC-compatible service scripts and the <code>/etc/rc.conf</code> configuration layer that dinit uses on Artix. It is required alongside <code>dinit</code> itself.</div>
+  </div>
+
+  <div class="callout tip">
+    <span class="callout-icon">✦</span>
+    <div>If you are on Wi-Fi during the live environment and need to connect first, see Step 11 for <code>iwctl</code> usage — the tool is available on the live ISO.</div>
+  </div>
+</section>
+
+<!-- ── 5. fstab ──────────────────────────────────────────────────── -->
+<section class="section" id="s5">
+  <div class="section-header">
+    <div class="section-num">5</div>
+    <div class="section-title">Generate fstab</div>
+  </div>
+
+  <div class="codeblock">
+    <div class="codeblock-header"><span class="codeblock-label">generate using UUIDs (recommended)</span></div>
+    <pre><span class="cmd">fstabgen</span> <span class="flag">-U</span> <span class="path">/mnt</span> >> <span class="path">/mnt/etc/fstab</span></pre>
+  </div>
+
+  <div class="codeblock">
+    <div class="codeblock-header"><span class="codeblock-label">review the result</span></div>
+    <pre><span class="cmd">cat</span> <span class="path">/mnt/etc/fstab</span>
+<span class="comment"># Verify you see: UUID=... / ext4 ... and UUID=... /boot/efi vfat ...
+# and /swapfile none swap sw 0 0  (if swapfile was created)</span></pre>
+  </div>
+</section>
+
+<!-- ── 6. Chroot ─────────────────────────────────────────────────── -->
+<section class="section" id="s6">
+  <div class="section-header">
+    <div class="section-num">6</div>
+    <div class="section-title">Chroot &amp; configure locale</div>
+  </div>
+
+  <div class="codeblock">
+    <div class="codeblock-header"><span class="codeblock-label">enter the chroot</span></div>
+    <pre><span class="cmd">artix-chroot</span> <span class="path">/mnt</span> /bin/bash</pre>
+  </div>
+
+  <h3>Timezone</h3>
+  <div class="codeblock">
+    <div class="codeblock-header"><span class="codeblock-label">set timezone (example: America/New_York)</span></div>
+    <pre><span class="cmd">ln</span> <span class="flag">-sf</span> <span class="path">/usr/share/zoneinfo/America/New_York</span> <span class="path">/etc/localtime</span>
+<span class="cmd">hwclock</span> <span class="flag">--systohc</span>
+<span class="comment"># List available zones: ls /usr/share/zoneinfo/</span></pre>
+  </div>
+
+  <h3>Locale</h3>
+  <div class="codeblock">
+    <div class="codeblock-header"><span class="codeblock-label">uncomment your locale in /etc/locale.gen</span></div>
+    <pre><span class="cmd">nvim</span> <span class="path">/etc/locale.gen</span>
+<span class="comment"># Uncomment:  en_US.UTF-8 UTF-8
+# (and any other locales you need)
+# Save and exit: :wq</span></pre>
+  </div>
+
+  <div class="codeblock">
+    <div class="codeblock-header"><span class="codeblock-label">generate locales &amp; set default</span></div>
+    <pre><span class="cmd">locale-gen</span>
+<span class="cmd">echo</span> <span class="val">"LANG=en_US.UTF-8"</span> > <span class="path">/etc/locale.conf</span></pre>
+  </div>
+
+  <h3>Console keymap (optional)</h3>
+  <div class="codeblock">
+    <div class="codeblock-header"><span class="codeblock-label">/etc/vconsole.conf</span></div>
+    <pre><span class="cmd">echo</span> <span class="val">"KEYMAP=us"</span> > <span class="path">/etc/vconsole.conf</span></pre>
+  </div>
+</section>
+
+<!-- ── 7. Hostname ───────────────────────────────────────────────── -->
+<section class="section" id="s7">
+  <div class="section-header">
+    <div class="section-num">7</div>
+    <div class="section-title">Hostname &amp; hosts</div>
+  </div>
+
+  <div class="codeblock">
+    <div class="codeblock-header"><span class="codeblock-label">set hostname (replace 'myhostname')</span></div>
+    <pre><span class="cmd">echo</span> <span class="val">"myhostname"</span> > <span class="path">/etc/hostname</span></pre>
+  </div>
+
+  <div class="codeblock">
+    <div class="codeblock-header"><span class="codeblock-label">/etc/hosts</span></div>
+    <pre><span class="cmd">nvim</span> <span class="path">/etc/hosts</span>
+<span class="comment"># Add these lines (replace myhostname):</span>
+<span class="val">127.0.0.1    localhost
+::1          localhost
+127.0.1.1    myhostname.localdomain  myhostname</span></pre>
+  </div>
+</section>
+
+<!-- ── 8. initramfs ──────────────────────────────────────────────── -->
+<section class="section" id="s8">
+  <div class="section-header">
+    <div class="section-num">8</div>
+    <div class="section-title">Configure &amp; generate initramfs</div>
+  </div>
+
+  <p>This is the most critical step for LUKS. We must add <code>encrypt</code> to the <code>HOOKS</code> array in <code>mkinitcpio.conf</code> so the initramfs can unlock the LUKS container at boot.</p>
+
+  <div class="codeblock">
+    <div class="codeblock-header"><span class="codeblock-label">edit /etc/mkinitcpio.conf</span></div>
+    <pre><span class="cmd">nvim</span> <span class="path">/etc/mkinitcpio.conf</span>
+
+<span class="comment"># Find the HOOKS line and set it to exactly this:</span>
+<span class="var">HOOKS</span>=(<span class="val">base udev autodetect microcode modconf kms keyboard keymap block encrypt filesystems fsck</span>)
+
+<span class="comment"># Important notes:
+#  - 'keyboard' and 'keymap' must be BEFORE 'encrypt'
+#    so you can type your passphrase at boot
+#  - 'encrypt' must be BEFORE 'filesystems'
+#  - 'microcode' handles AMD/Intel microcode loading</span></pre>
+  </div>
+
+  <div class="callout info">
+    <span class="callout-icon">ℹ</span>
+    <div>If you have an Intel CPU, install <code>intel-ucode</code>. For AMD, install <code>amd-ucode</code>. The <code>microcode</code> hook will pick up whichever is present automatically.<br>
+    <code>pacman -S intel-ucode</code> or <code>pacman -S amd-ucode</code></div>
+  </div>
+
+  <div class="codeblock">
+    <div class="codeblock-header"><span class="codeblock-label">regenerate the initramfs</span></div>
+    <pre><span class="cmd">mkinitcpio</span> <span class="flag">-P</span>
+<span class="comment"># -P regenerates for all installed kernels
+# Look for: ==> Image generation successful</span></pre>
+  </div>
+</section>
+
+<!-- ── 9. GRUB ───────────────────────────────────────────────────── -->
+<section class="section" id="s9">
+  <div class="section-header">
+    <div class="section-num">9</div>
+    <div class="section-title">Install &amp; configure GRUB</div>
+  </div>
+
+  <p>GRUB needs to know where the LUKS partition is so it can pass <code>cryptdevice</code> to the kernel on boot. We need the UUID of the <em>raw</em> LUKS partition (not the mapped device).</p>
+
+  <div class="codeblock">
+    <div class="codeblock-header"><span class="codeblock-label">get UUID of the LUKS partition</span></div>
+    <pre><span class="cmd">blkid</span> <span class="path">/dev/nvme0n1p2</span>
+<span class="comment"># Copy the UUID value — looks like: a1b2c3d4-e5f6-7890-abcd-ef1234567890
+# You can also run: blkid -s UUID -o value /dev/nvme0n1p2</span></pre>
+  </div>
+
+  <div class="codeblock">
+    <div class="codeblock-header"><span class="codeblock-label">edit /etc/default/grub</span></div>
+    <pre><span class="cmd">nvim</span> <span class="path">/etc/default/grub</span>
+
+<span class="comment"># Find and edit the GRUB_CMDLINE_LINUX_DEFAULT line:
+# Replace YOUR-UUID with the UUID from blkid above</span>
+
+<span class="var">GRUB_CMDLINE_LINUX_DEFAULT</span>=<span class="val">"loglevel=3 quiet cryptdevice=UUID=YOUR-UUID:cryptroot root=/dev/mapper/cryptroot"</span>
+
+<span class="comment"># Also set (or verify):</span>
+<span class="var">GRUB_ENABLE_CRYPTODISK</span>=<span class="val">y</span>
+
+<span class="comment"># Optional: show GRUB menu (remove 'quiet' if you want verbose boot)</span></pre>
+  </div>
+
+  <div class="callout danger">
+    <span class="callout-icon">✕</span>
+    <div><strong>GRUB_ENABLE_CRYPTODISK=y</strong> is mandatory. Without it, GRUB cannot read the encrypted partition to find its configuration and will fail to boot.</div>
+  </div>
+
+  <div class="codeblock">
+    <div class="codeblock-header"><span class="codeblock-label">install GRUB to EFI</span></div>
+    <pre><span class="cmd">grub-install</span> \
+  <span class="flag">--target</span>=x86_64-efi \
+  <span class="flag">--efi-directory</span>=<span class="path">/boot/efi</span> \
+  <span class="flag">--bootloader-id</span>=<span class="val">ARTIX</span> \
+  <span class="flag">--recheck</span>
+
+<span class="comment"># Expected: Installation finished. No error reported.</span></pre>
+  </div>
+
+  <div class="codeblock">
+    <div class="codeblock-header"><span class="codeblock-label">generate GRUB config</span></div>
+    <pre><span class="cmd">grub-mkconfig</span> <span class="flag">-o</span> <span class="path">/boot/grub/grub.cfg</span>
+
+<span class="comment"># You should see "Found linux image" and "Found initrd image" lines
+# Verify the cryptdevice parameter appears in the output</span></pre>
+  </div>
+
+  <div class="callout info">
+    <span class="callout-icon">ℹ</span>
+    <div>With <code>GRUB_ENABLE_CRYPTODISK=y</code>, GRUB will ask for your LUKS passphrase <em>twice</em> on boot: once for GRUB to access its own config, and once from the initramfs. This is normal. You can eliminate the double prompt by embedding a keyfile, which is an optional post-install hardening step.</div>
+  </div>
+</section>
+
+<!-- ── 10. Users ─────────────────────────────────────────────────── -->
+<section class="section" id="s10">
+  <div class="section-header">
+    <div class="section-num">10</div>
+    <div class="section-title">Root password &amp; user account</div>
+  </div>
+
+  <div class="codeblock">
+    <div class="codeblock-header"><span class="codeblock-label">set root password</span></div>
+    <pre><span class="cmd">passwd</span></pre>
+  </div>
+
+  <div class="codeblock">
+    <div class="codeblock-header"><span class="codeblock-label">create a regular user (replace 'alice')</span></div>
+    <pre><span class="cmd">useradd</span> <span class="flag">-m</span> <span class="flag">-G</span> wheel,audio,video,storage,optical,lp,scanner,network <span class="flag">-s</span> /bin/bash <span class="val">alice</span>
+<span class="cmd">passwd</span> <span class="val">alice</span></pre>
+  </div>
+
+  <div class="codeblock">
+    <div class="codeblock-header"><span class="codeblock-label">enable sudo for wheel group</span></div>
+    <pre><span class="cmd">EDITOR=nvim</span> <span class="cmd">visudo</span>
+<span class="comment"># Uncomment the line:
+# %wheel ALL=(ALL:ALL) ALL</span></pre>
+  </div>
+</section>
+
+<!-- ── 11. iwd ───────────────────────────────────────────────────── -->
+<section class="section" id="s11">
+  <div class="section-header">
+    <div class="section-num">11</div>
+    <div class="section-title">iwd networking (Wi-Fi)</div>
+  </div>
+
+  <p>Artix uses <code>iwd</code> (iNet wireless daemon) for Wi-Fi. It can also handle IP assignment via its built-in DHCP client, so no separate dhcpcd is required for simple setups.</p>
+
+  <h3>Enable iwd DHCP client</h3>
+  <div class="codeblock">
+    <div class="codeblock-header"><span class="codeblock-label">/etc/iwd/main.conf</span></div>
+    <pre><span class="cmd">mkdir</span> <span class="flag">-p</span> <span class="path">/etc/iwd</span>
+<span class="cmd">nvim</span> <span class="path">/etc/iwd/main.conf</span>
+
+<span class="comment"># Add these contents:</span>
+<span class="val">[General]
+EnableNetworkConfiguration=true
+
+[Network]
+NameResolvingService=resolvconf</span></pre>
+  </div>
+
+  <h3>Enable the iwd dinit service</h3>
+  <div class="codeblock">
+    <div class="codeblock-header"><span class="codeblock-label">enable iwd at boot</span></div>
+    <pre><span class="cmd">ln</span> <span class="flag">-s</span> <span class="path">/etc/dinit.d/iwd</span> <span class="path">/etc/dinit.d/boot.d/iwd</span></pre>
+  </div>
+
+  <h3>Connect to Wi-Fi at boot / live environment</h3>
+  <div class="codeblock">
+    <div class="codeblock-header"><span class="codeblock-label">iwctl — interactive Wi-Fi setup</span></div>
+    <pre><span class="cmd">iwctl</span>
+
+<span class="comment"># Inside iwctl interactive shell:</span>
+[iwd]# <span class="cmd">device</span> list
+[iwd]# <span class="cmd">station</span> <span class="var">wlan0</span> scan
+[iwd]# <span class="cmd">station</span> <span class="var">wlan0</span> get-networks
+[iwd]# <span class="cmd">station</span> <span class="var">wlan0</span> connect <span class="val">"MyNetwork"</span>
+         <span class="comment"># enter passphrase when prompted</span>
+[iwd]# <span class="cmd">quit</span></pre>
+  </div>
+
+  <div class="callout tip">
+    <span class="callout-icon">✦</span>
+    <div>iwd remembers networks you connect to. Credentials are stored in <code>/var/lib/iwd/</code> and reconnection is automatic on subsequent boots.</div>
+  </div>
+
+  <h3>Optional: install resolvconf for DNS</h3>
+  <div class="codeblock">
+    <div class="codeblock-header"><span class="codeblock-label">openresolv for /etc/resolv.conf management</span></div>
+    <pre><span class="cmd">pacman</span> <span class="flag">-S</span> openresolv</pre>
+  </div>
+</section>
+
+<!-- ── 12. Neovim ────────────────────────────────────────────────── -->
+<section class="section" id="s12">
+  <div class="section-header">
+    <div class="section-num">12</div>
+    <div class="section-title">Neovim setup</div>
+  </div>
+
+  <p>Neovim was already installed in Step 4. Below is optional initial configuration to make it usable immediately.</p>
+
+  <div class="codeblock">
+    <div class="codeblock-header"><span class="codeblock-label">create minimal init.lua</span></div>
+    <pre><span class="cmd">mkdir</span> <span class="flag">-p</span> <span class="path">~/.config/nvim</span>
+<span class="cmd">nvim</span> <span class="path">~/.config/nvim/init.lua</span>
+
+<span class="comment">-- Paste this starter config:</span>
+<span class="val">vim.opt.number = true
+vim.opt.relativenumber = true
+vim.opt.tabstop = 4
+vim.opt.shiftwidth = 4
+vim.opt.expandtab = true
+vim.opt.smartindent = true
+vim.opt.wrap = false
+vim.opt.termguicolors = true
+vim.opt.hlsearch = false
+vim.opt.incsearch = true
+vim.opt.scrolloff = 8
+vim.g.mapleader = " "</span></pre>
+  </div>
+
+  <div class="callout tip">
+    <span class="callout-icon">✦</span>
+    <div>For a full plugin setup, install <strong>lazy.nvim</strong> as a plugin manager post-reboot: <code>git clone --filter=blob:none https://github.com/folke/lazy.nvim ~/.local/share/nvim/lazy/lazy.nvim</code></div>
+  </div>
+</section>
+
+<!-- ── 13. CUPS ──────────────────────────────────────────────────── -->
+<section class="section" id="s13">
+  <div class="section-header">
+    <div class="section-num">13</div>
+    <div class="section-title">CUPS printing with Avahi discovery</div>
+  </div>
+
+  <p>Artix does not ship <code>cups-browsed</code> because it is systemd-dependent. Printer auto-discovery is instead handled by <strong>Avahi</strong> (mDNS/DNS-SD / Bonjour), which works perfectly with dinit and provides the same discovery capability for network printers.</p>
+
+  <h3>Install packages</h3>
+  <div class="codeblock">
+    <div class="codeblock-header"><span class="codeblock-label">cups + avahi + drivers</span></div>
+    <pre><span class="cmd">pacman</span> <span class="flag">-S</span> \
+  cups cups-dinit \
+  avahi avahi-dinit \
+  nss-mdns \
+  print-manager \
+  ghostscript gsfonts \
+  foomatic-db foomatic-db-engine \
+  hplip \                      <span class="comment"># HP printers — remove if not needed</span>
+  system-config-printer        <span class="comment"># GUI printer manager (optional)</span></pre>
+  </div>
+
+  <div class="callout info">
+    <span class="callout-icon">ℹ</span>
+    <div><strong>avahi-dinit</strong> is the Artix dinit service unit for avahi-daemon. The <strong>nss-mdns</strong> package enables <code>.local</code> hostname resolution (needed so CUPS can find Avahi-discovered printers by hostname).</div>
+  </div>
+
+  <h3>Configure nss-mdns for .local resolution</h3>
+  <div class="codeblock">
+    <div class="codeblock-header"><span class="codeblock-label">/etc/nsswitch.conf — add mdns4_minimal</span></div>
+    <pre><span class="cmd">nvim</span> <span class="path">/etc/nsswitch.conf</span>
+
+<span class="comment"># Find the 'hosts:' line and make it look like this:</span>
+<span class="var">hosts</span>: <span class="val">mymachines mdns4_minimal [NOTFOUND=return] resolve [!UNAVAIL=return] files myhostname dns</span>
+
+<span class="comment"># The key addition is 'mdns4_minimal [NOTFOUND=return]' before 'resolve'</span></pre>
+  </div>
+
+  <h3>Configure Avahi to browse for printers</h3>
+  <div class="codeblock">
+    <div class="codeblock-header"><span class="codeblock-label">/etc/avahi/avahi-daemon.conf — verify these settings</span></div>
+    <pre><span class="cmd">nvim</span> <span class="path">/etc/avahi/avahi-daemon.conf</span>
+
+<span class="comment"># Ensure these are set under [server]:</span>
+<span class="var">use-ipv4</span>=<span class="val">yes</span>
+<span class="var">use-ipv6</span>=<span class="val">yes</span>
+
+<span class="comment"># And under [publish]:</span>
+<span class="var">publish-hinfo</span>=<span class="val">no</span>
+<span class="var">publish-workstation</span>=<span class="val">no</span></pre>
+  </div>
+
+  <h3>Enable CUPS Avahi backend</h3>
+  <div class="codeblock">
+    <div class="codeblock-header"><span class="codeblock-label">/etc/cups/cups-files.conf — allow network browsing</span></div>
+    <pre><span class="cmd">nvim</span> <span class="path">/etc/cups/cups-files.conf</span>
+<span class="comment"># Ensure (or add):</span>
+<span class="var">Browsing</span> <span class="val">Yes</span>
+<span class="var">BrowseLocalProtocols</span> <span class="val">dnssd</span></pre>
+  </div>
+
+  <div class="codeblock">
+    <div class="codeblock-header"><span class="codeblock-label">/etc/cups/cupsd.conf — allow localhost access</span></div>
+    <pre><span class="cmd">nvim</span> <span class="path">/etc/cups/cupsd.conf</span>
+<span class="comment"># Verify / add near the top:</span>
+<span class="var">Listen</span> <span class="val">localhost:631</span>
+<span class="var">Listen</span> <span class="val">/run/cups/cups.sock</span>
+
+<span class="comment"># For web UI access from localhost:</span>
+&lt;<span class="var">Location</span> /&gt;
+  <span class="var">Order allow,deny</span>
+  <span class="var">Allow</span> <span class="val">localhost</span>
+&lt;/<span class="var">Location</span>&gt;
+
+&lt;<span class="var">Location</span> /admin&gt;
+  <span class="var">Order allow,deny</span>
+  <span class="var">Allow</span> <span class="val">localhost</span>
+&lt;/<span class="var">Location</span>&gt;</pre>
+  </div>
+
+  <h3>Enable services</h3>
+  <div class="codeblock">
+    <div class="codeblock-header"><span class="codeblock-label">enable cups and avahi via dinit boot.d symlinks</span></div>
+    <pre><span class="cmd">ln</span> <span class="flag">-s</span> <span class="path">/etc/dinit.d/cupsd</span>   <span class="path">/etc/dinit.d/boot.d/cupsd</span>
+<span class="cmd">ln</span> <span class="flag">-s</span> <span class="path">/etc/dinit.d/avahi-daemon</span> <span class="path">/etc/dinit.d/boot.d/avahi-daemon</span></pre>
+  </div>
+
+  <div class="callout success">
+    <span class="callout-icon">✓</span>
+    <div><strong>How discovery works without cups-browsed:</strong> Avahi-daemon listens on the network for DNS-SD/mDNS announcements from printers advertising IPP (Internet Printing Protocol). When you open the CUPS web UI at <code>http://localhost:631</code> or use <code>system-config-printer</code>, Avahi-discovered printers appear automatically as available network printers — no cups-browsed needed.</div>
+  </div>
+
+  <h3>Add user to lp group</h3>
+  <div class="codeblock">
+    <div class="codeblock-header"><span class="codeblock-label">allow user to manage printers (replace 'alice')</span></div>
+    <pre><span class="cmd">usermod</span> <span class="flag">-aG</span> lp,sys <span class="val">alice</span></pre>
+  </div>
+</section>
+
+<!-- ── 14. Reboot ────────────────────────────────────────────────── -->
+<section class="section" id="s14">
+  <div class="section-header">
+    <div class="section-num">14</div>
+    <div class="section-title">Exit chroot &amp; reboot</div>
+  </div>
+
+  <div class="codeblock">
+    <div class="codeblock-header"><span class="codeblock-label">exit chroot and unmount everything cleanly</span></div>
+    <pre><span class="cmd">exit</span>                          <span class="comment"># leave chroot</span>
+<span class="cmd">umount</span> <span class="flag">-R</span> <span class="path">/mnt</span>                 <span class="comment"># unmount all</span>
+<span class="cmd">cryptsetup</span> close cryptroot    <span class="comment"># close LUKS</span>
+<span class="cmd">reboot</span></pre>
+  </div>
+
+  <div class="callout info">
+    <span class="callout-icon">ℹ</span>
+    <div>On first boot: GRUB will prompt for your LUKS passphrase (once for GRUB itself, then once for the initramfs unlock). This is expected. After unlocking, dinit starts your services.</div>
+  </div>
+</section>
+
+<!-- ── 15. Post-install ──────────────────────────────────────────── -->
+<section class="section" id="s15">
+  <div class="section-header">
+    <div class="section-num">✓</div>
+    <div class="section-title">Post-install &amp; tips</div>
+  </div>
+
+  <h3>Verify services are running</h3>
+  <div class="codeblock">
+    <div class="codeblock-header"><span class="codeblock-label">check dinit service status</span></div>
+    <pre><span class="cmd">dinitctl</span> list
+<span class="cmd">dinitctl</span> status iwd
+<span class="cmd">dinitctl</span> status cupsd
+<span class="cmd">dinitctl</span> status avahi-daemon</pre>
+  </div>
+
+  <h3>Connect to Wi-Fi after reboot</h3>
+  <div class="codeblock">
+    <div class="codeblock-header"><span class="codeblock-label">iwctl quick connect</span></div>
+    <pre><span class="cmd">iwctl</span> station wlan0 connect <span class="val">"MyNetwork"</span></pre>
+  </div>
+
+  <h3>Access CUPS web UI</h3>
+  <div class="codeblock">
+    <div class="codeblock-header"><span class="codeblock-label">open in browser</span></div>
+    <pre><span class="comment"># In a browser, navigate to:</span>
+<span class="val">http://localhost:631</span>
+<span class="comment"># Go to Administration > Add Printer
+# Avahi-discovered printers appear under "Discovered Network Printers"</span></pre>
+  </div>
+
+  <h3>Install a desktop environment (optional)</h3>
+  <div class="codeblock">
+    <div class="codeblock-header"><span class="codeblock-label">example: sway (Wayland WM) with dinit</span></div>
+    <pre><span class="cmd">pacman</span> <span class="flag">-S</span> sway seatd seatd-dinit foot
+<span class="cmd">ln</span> <span class="flag">-s</span> <span class="path">/etc/dinit.d/seatd</span> <span class="path">/etc/dinit.d/boot.d/seatd</span></pre>
+  </div>
+
+  <h3>Pacman tips</h3>
+  <div class="codeblock">
+    <div class="codeblock-header"><span class="codeblock-label">useful pacman commands</span></div>
+    <pre><span class="cmd">pacman</span> <span class="flag">-Syu</span>                  <span class="comment"># full system upgrade</span>
+<span class="cmd">pacman</span> <span class="flag">-Ss</span> <span class="val">keyword</span>           <span class="comment"># search packages</span>
+<span class="cmd">pacman</span> <span class="flag">-Qi</span> <span class="val">package</span>           <span class="comment"># package info</span>
+<span class="cmd">pacman</span> <span class="flag">-Qs</span> <span class="val">keyword</span>           <span class="comment"># search installed</span></pre>
+  </div>
+
+  <div class="callout success">
+    <span class="callout-icon">✓</span>
+    <div><strong>You're done!</strong> You now have a fully encrypted Artix Linux system with LUKS2, dinit init, GRUB, iwd Wi-Fi, Neovim, and CUPS with Avahi-based printer auto-discovery — no systemd anywhere.</div>
+  </div>
+
+  <h3>Quick reference: key file locations</h3>
+  <table class="part-table" style="margin-top: 0.5rem;">
+    <thead><tr><th>File</th><th>Purpose</th></tr></thead>
+    <tbody>
+      <tr><td><code>/etc/default/grub</code></td><td class="desc">GRUB config — cryptdevice parameter</td></tr>
+      <tr><td><code>/etc/mkinitcpio.conf</code></td><td class="desc">initramfs hooks — encrypt must be present</td></tr>
+      <tr><td><code>/etc/iwd/main.conf</code></td><td class="desc">iwd config — DHCP &amp; DNS settings</td></tr>
+      <tr><td><code>/etc/avahi/avahi-daemon.conf</code></td><td class="desc">Avahi mDNS daemon config</td></tr>
+      <tr><td><code>/etc/cups/cupsd.conf</code></td><td class="desc">CUPS server config</td></tr>
+      <tr><td><code>/etc/nsswitch.conf</code></td><td class="desc">mdns4_minimal for .local resolution</td></tr>
+      <tr><td><code>/etc/dinit.d/boot.d/</code></td><td class="desc">Symlinks here = services enabled at boot</td></tr>
+      <tr><td><code>/var/lib/iwd/</code></td><td class="desc">Saved Wi-Fi credentials</td></tr>
+    </tbody>
+  </table>
+</section>
+
+</main>
+</div>
+
+<script>
+const sections = document.querySelectorAll('.section');
+const links = document.querySelectorAll('.sidebar a');
+
+const observer = new IntersectionObserver(entries => {
+  entries.forEach(entry => {
+    if (entry.isIntersecting) {
+      links.forEach(l => l.classList.remove('active'));
+      const id = entry.target.id;
+      const active = document.querySelector(`.sidebar a[href="#${id}"]`);
+      if (active) active.classList.add('active');
+    }
+  });
+}, { threshold: 0.3 });
+
+sections.forEach(s => observer.observe(s));
+</script>
+
+</body>
+</html>
